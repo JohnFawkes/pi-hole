@@ -3,13 +3,13 @@
 # (c) 2017 Pi-hole, LLC (https://pi-hole.net)
 # Network-wide ad blocking via your own hardware.
 #
-# Switch Pi-hole subsystems to a different Github branch.
+# Switch Pi-hole subsystems to a different GitHub branch.
 #
 # This file is copyright under the latest version of the EUPL.
 # Please see LICENSE file for your rights under this license.
 
 readonly PI_HOLE_FILES_DIR="/etc/.pihole"
-PH_TEST="true"
+SKIP_INSTALL="true"
 source "${PI_HOLE_FILES_DIR}/automated install/basic-install.sh"
 
 # webInterfaceGitUrl set in basic-install.sh
@@ -36,7 +36,7 @@ warning1() {
             return 0
             ;;
         *)
-            echo -e "\\n  ${INFO} Branch change has been cancelled"
+            echo -e "\\n  ${INFO} Branch change has been canceled"
             return 1
             ;;
     esac
@@ -84,7 +84,7 @@ checkout() {
         echo -e "  ${INFO} Shortcut \"dev\" detected - checking out development / devel branches..."
         echo ""
         echo -e "  ${INFO} Pi-hole Core"
-        fetch_checkout_pull_branch "${PI_HOLE_FILES_DIR}" "development" || { echo "  ${CROSS} Unable to pull Core developement branch"; exit 1; }
+        fetch_checkout_pull_branch "${PI_HOLE_FILES_DIR}" "development" || { echo "  ${CROSS} Unable to pull Core development branch"; exit 1; }
         if [[ "${INSTALL_WEB_INTERFACE}" == "true" ]]; then
             echo ""
             echo -e "  ${INFO} Web interface"
@@ -164,17 +164,24 @@ checkout() {
             exit 1
         fi
         checkout_pull_branch "${webInterfaceDir}" "${2}"
+        # Update local and remote versions via updatechecker
+        /opt/pihole/updatecheck.sh
     elif [[ "${1}" == "ftl" ]] ; then
         local path
+        local oldbranch
         path="${2}/${binary}"
+        oldbranch="$(pihole-FTL -b)"
 
         if check_download_exists "$path"; then
             echo "  ${TICK} Branch ${2} exists"
             echo "${2}" > /etc/pihole/ftlbranch
             chmod 644 /etc/pihole/ftlbranch
+            echo -e "  ${INFO} Switching to branch: \"${2}\" from \"${oldbranch}\""
             FTLinstall "${binary}"
             restart_service pihole-FTL
             enable_service pihole-FTL
+            # Update local and remote versions via updatechecker
+            /opt/pihole/updatecheck.sh
         else
             echo "  ${CROSS} Requested branch \"${2}\" is not available"
             ftlbranches=( $(git ls-remote https://github.com/pi-hole/ftl | grep 'heads' | sed 's/refs\/heads\///;s/ //g' | awk '{print $2}') )
